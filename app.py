@@ -157,8 +157,58 @@ st.markdown("""
 | **High-Page-Depth Browser** | Highest pages viewed per session | Improve in-app search/recommendations to reduce browsing friction |
 """)
 
+# ---------------- Predict cluster for a new user ----------------
+st.header("6️⃣ Predict Cluster for a New User")
+st.markdown("Enter a user's behavioral stats below to see which segment they'd belong to.")
+
+feature_display_names = {
+    'sessions_per_week': 'Sessions per Week',
+    'avg_session_duration_min': 'Avg Session Duration (min)',
+    'daily_active_minutes': 'Daily Active Minutes',
+    'feature_clicks_per_session': 'Feature Clicks per Session',
+    'notifications_opened_per_week': 'Notifications Opened per Week',
+    'in_app_search_count': 'In-App Search Count',
+    'pages_viewed_per_session': 'Pages Viewed per Session',
+    'crash_events_last_30_days': 'Crash Events (Last 30 Days)',
+    'support_tickets_raised': 'Support Tickets Raised',
+    'days_since_last_login': 'Days Since Last Login',
+    'ads_clicked_last_30_days': 'Ads Clicked (Last 30 Days)',
+    'content_downloads': 'Content Downloads',
+    'social_shares': 'Social Shares',
+    'account_age_days': 'Account Age (Days)'
+}
+
+with st.form("predict_form"):
+    input_cols = st.columns(2)
+    user_input = {}
+    for i, feat in enumerate(FEATURES):
+        col = input_cols[i % 2]
+        default_val = float(df[feat].median())
+        min_val = float(df[feat].min())
+        max_val = float(df[feat].max())
+        user_input[feat] = col.number_input(
+            feature_display_names.get(feat, feat),
+            min_value=min_val, max_value=max_val, value=default_val
+        )
+    submitted = st.form_submit_button("Predict Cluster")
+
+if submitted:
+    input_df = pd.DataFrame([user_input])[FEATURES]
+    input_scaled = scaler.transform(input_df)
+    predicted_cluster = kmeans.predict(input_scaled)[0]
+    predicted_label = CLUSTER_NAMES.get(predicted_cluster, f"Cluster {predicted_cluster}")
+
+    st.success(f"🎯 Predicted Segment: **{predicted_label}**")
+
+    st.markdown("**How this user compares to the cluster average:**")
+    compare_df = pd.DataFrame({
+        'This User': user_input,
+        f'{predicted_label} Avg': cluster_profile.loc[predicted_label, FEATURES].to_dict()
+    })
+    st.dataframe(compare_df.round(2), use_container_width=True)
+
 # ---------------- Export ----------------
-st.header("6️⃣ Export Cluster Assignments")
+st.header("7️⃣ Export Cluster Assignments")
 export_cols = ['user_id', 'cluster', 'cluster_label'] + [c for c in
     ['avg_session_duration_min', 'pages_viewed_per_session', 'support_tickets_raised',
      'engagement_score', 'churn_risk_score'] if c in df.columns]
